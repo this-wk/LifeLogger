@@ -7,7 +7,7 @@ Output System: Track deliverables (Code, Article) with a "Daily Streak" to motiv
 Continuous Tasks: Allow users to easily "Continue" an existing long-term task (e.g., "Learn C++") without re-typing the title, and view them as a series.
 
 2. Database Schema (数据库扩展)
-A. life_records Collection: Update schema to support output type and project_ref.
+A. timelogs Collection: Update schema to support output type and project_ref.
 
 JSON
 

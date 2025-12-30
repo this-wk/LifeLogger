@@ -5,7 +5,7 @@ Task Management: Implement "Eisenhower Matrix" (Four Quadrants) and "Continuous 
 Finance Analysis: Implement "Grouped Display" (Foldable Lists by Week/Month) with auto-calculation of totals.
 
 2. Database Schema Changes (数据库变更)
-A. Update life_records Collection: Add the following fields to the existing schema:
+A. Update timelogs Collection: Add the following fields to the existing schema:
 
 JSON
 
