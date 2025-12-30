@@ -1,0 +1,23 @@
+/** app.wxss **/
+page {
+  /* 莫兰迪色系 / Modern Color Palette */
+  --primary-color: #4A90E2;      /* 主色调：静谧蓝 */
+  --primary-light: #E1F0FF;     /* 浅色背景 */
+  --text-main: #333333;         /* 主要文字 */
+  --text-sub: #888888;          /* 次要文字 */
+  --bg-color: #F8F9FA;          /* 全局背景：灰白 */
+  --card-bg: #FFFFFF;           /* 卡片背景 */
+  --shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.05); /* 柔和阴影 */
+  
+  background-color: var(--bg-color);
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Segoe UI, Arial, Roboto, 'PingFang SC', 'miui', 'Hiragino Sans GB', 'Microsoft Yahei', sans-serif;
+  color: var(--text-main);
+  box-sizing: border-box;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  padding: 30rpx;
+  box-sizing: border-box;
+}

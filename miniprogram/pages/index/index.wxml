@@ -1,0 +1,189 @@
+<!-- index.wxml -->
+<view class="container">
+  
+  <!-- Header Area -->
+  <view class="header-area">
+    <view class="header-text">
+      <text class="title">My Time Logger</text>
+      <view class="subtitle-row">
+        <text class="subtitle">记录生活，规划未来</text>
+        <view class="streak-badge" wx:if="{{streak > 0}}">🔥 {{streak}} Days</view>
+      </view>
+    </view>
+    
+    <!-- Group Mode Switch (Unified) -->
+    <view class="mode-switch">
+      <!-- Time Tab Controls -->
+      <block wx:if="{{currentTab === 'time'}}">
+        <text class="{{timeViewMode === 'project' ? 'active' : ''}}" bindtap="switchGroupMode" data-mode="project">项目</text>
+        <text class="divider">|</text>
+        <text class="{{timeViewMode === 'timeline' && timeGroupMode === 'week' ? 'active' : ''}}" bindtap="switchGroupMode" data-mode="week">周</text>
+        <text class="divider">|</text>
+        <text class="{{timeViewMode === 'timeline' && timeGroupMode === 'month' ? 'active' : ''}}" bindtap="switchGroupMode" data-mode="month">月</text>
+      </block>
+
+      <!-- Money Tab Controls -->
+      <block wx:if="{{currentTab === 'money'}}">
+        <text class="{{moneyGroupMode === 'week' ? 'active' : ''}}" bindtap="switchGroupMode" data-mode="week">周</text>
+        <text class="divider">|</text>
+        <text class="{{moneyGroupMode === 'month' ? 'active' : ''}}" bindtap="switchGroupMode" data-mode="month">月</text>
+      </block>
+
+      <!-- Output Tab Controls -->
+      <block wx:if="{{currentTab === 'output'}}">
+        <text class="{{outputGroupMode === 'week' ? 'active' : ''}}" bindtap="switchGroupMode" data-mode="week">周</text>
+        <text class="divider">|</text>
+        <text class="{{outputGroupMode === 'month' ? 'active' : ''}}" bindtap="switchGroupMode" data-mode="month">月</text>
+      </block>
+    </view>
+  </view>
+
+  <!-- Main Tabs -->
+  <view class="tab-bar">
+    <view class="tab-item {{currentTab === 'time' ? 'active' : ''}}" bindtap="switchTab" data-tab="time">⏳ 时间</view>
+    <view class="tab-item {{currentTab === 'output' ? 'active' : ''}}" bindtap="switchTab" data-tab="output">🏆 产出</view>
+    <view class="tab-item {{currentTab === 'money' ? 'active' : ''}}" bindtap="switchTab" data-tab="money">💰 账本</view>
+  </view>
+
+  <!-- === SCENE 1: TIME TAB === -->
+  <view class="log-list" wx:if="{{currentTab === 'time'}}">
+    
+    <!-- Sub-Scene A: Timeline View (Hidden/Deprecated for now, accessible only via code) -->
+    <block wx:if="{{timeViewMode === 'timeline'}}">
+      <block wx:for="{{timeGroups}}" wx:for-item="group" wx:key="key" wx:for-index="groupIndex">
+        <view class="group-header" bindtap="toggleGroup" data-index="{{groupIndex}}" data-type="time">
+          <text class="group-title">{{group.title}}</text>
+          <view class="group-meta"><text>{{group.totalDuration}} min</text><text class="arrow {{group.expanded ? 'down' : 'right'}}">▶</text></view>
+        </view>
+        <view class="group-items" hidden="{{!group.expanded}}">
+          <block wx:for="{{group.items}}" wx:key="_id">
+            <view class="card priority-border-{{item.task_info ? item.task_info.priority : 2}}" bindtap="goToEdit" data-id="{{item._id}}">
+              <!-- Checkbox -->
+              <view class="checkbox-area" catchtap="onToggleTaskStatus" data-id="{{item._id}}" data-status="{{item.task_info ? item.task_info.status : 'doing'}}">
+                <view class="checkbox {{item.task_info && item.task_info.status === 'done' ? 'checked' : ''}}"></view>
+              </view>
+              
+              <image wx:if="{{item.fileID}}" class="card-img" src="{{item.fileID}}" mode="aspectFill" lazy-load />
+              <view class="card-content">
+                <view class="card-top">
+                  <text class="activity-name {{item.task_info && item.task_info.status === 'done' ? 'done-text' : ''}}">{{item.activity}}</text>
+                  <view class="duration-badge">{{item.duration}} min</view>
+                </view>
+                <view class="card-footer-row">
+                  <text class="note-text">{{item.note || 'No details...'}}</text>
+                  <text class="date-text">{{item.dateStr}}</text>
+                </view>
+              </view>
+            </view>
+          </block>
+        </view>
+      </block>
+      <block wx:if="{{timeGroups.length === 0 && !loading}}"><view class="empty-state"><text class="empty-emoji">⏳</text><text class="empty-text">Empty...</text></view></block>
+    </block>
+
+    <!-- Sub-Scene B: Project View -->
+    <block wx:if="{{timeViewMode === 'project'}}">
+      <block wx:for="{{projectGroups}}" wx:for-item="project" wx:key="title" wx:for-index="idx">
+        <view class="project-card {{project.status === 'done' ? 'project-done' : ''}}">
+          <!-- Project Header -->
+          <view class="project-header" bindtap="toggleGroup" data-index="{{idx}}" data-type="project">
+            
+            <!-- Project Checkbox -->
+            <view class="checkbox-area" style="padding-right: 20rpx;" catchtap="onToggleProjectStatus" data-title="{{project.title}}" data-status="{{project.status}}" data-index="{{idx}}">
+               <view class="checkbox {{project.status === 'done' ? 'checked' : ''}}" style="width:44rpx;height:44rpx;"></view>
+            </view>
+
+            <view class="project-info">
+              <text class="project-title {{project.status === 'done' ? 'done-text' : ''}}">{{project.title}}</text>
+              <text class="project-update">最近更新: {{project.lastUpdateStr}}</text>
+            </view>
+            <view class="project-stat">
+              <text class="stat-num">{{project.totalDuration}}</text>
+              <text class="stat-unit">min</text>
+            </view>
+          </view>
+          
+          <!-- Quick Add Button -->
+          <view class="project-action" wx:if="{{project.status !== 'done'}}">
+            <view class="add-btn" catchtap="onContinueProject" data-title="{{project.title}}">➕ 追加记录</view>
+          </view>
+
+          <!-- History List (Collapsible) -->
+          <view class="project-history" hidden="{{!project.expanded}}">
+            <view class="history-divider"></view>
+            <block wx:for="{{project.items}}" wx:key="_id">
+              <view class="history-item" bindtap="goToEdit" data-id="{{item._id}}">
+                <!-- Mini Checkbox -->
+                <view class="checkbox-area" style="padding:0 15rpx 0 0;" catchtap="onToggleTaskStatus" data-id="{{item._id}}" data-status="{{item.task_info ? item.task_info.status : 'doing'}}">
+                   <view class="checkbox {{item.task_info && item.task_info.status === 'done' ? 'checked' : ''}}" style="width:28rpx;height:28rpx;font-size:18rpx;border-width:2rpx;"></view>
+                </view>
+                
+                <text class="h-date">{{item.dateStr}}</text>
+                <text class="h-note {{item.task_info && item.task_info.status === 'done' ? 'done-text' : ''}}">{{item.note || '...'}}</text>
+                <text class="h-duration">{{item.duration}}m</text>
+              </view>
+            </block>
+          </view>
+        </view>
+      </block>
+      <block wx:if="{{projectGroups.length === 0 && !loading}}"><view class="empty-state"><text class="empty-emoji">📁</text><text class="empty-text">No projects found.</text></view></block>
+    </block>
+
+  </view>
+
+  <!-- === SCENE 2: OUTPUT TAB === -->
+  <view class="log-list" wx:if="{{currentTab === 'output'}}">
+    <block wx:for="{{outputGroups}}" wx:for-item="group" wx:key="key" wx:for-index="groupIndex">
+      <view class="group-header" bindtap="toggleGroup" data-index="{{groupIndex}}" data-type="output">
+        <text class="group-title">{{group.title}}</text>
+        <view class="group-meta"><text class="arrow {{group.expanded ? 'down' : 'right'}}">▶</text></view>
+      </view>
+      <view class="group-items" hidden="{{!group.expanded}}">
+        <block wx:for="{{group.items}}" wx:key="_id">
+          <view class="card gold-card" bindtap="goToEdit" data-id="{{item._id}}">
+            <view class="gold-icon">🏆</view>
+            <view class="card-content">
+              <view class="card-top"><text class="activity-name">{{item.activity}}</text><view class="gold-badge">{{item.output_data.type || 'Output'}}</view></view>
+              <view class="card-middle">
+                <text class="note-text" wx:if="{{item.note}}">{{item.note}}</text>
+                <view class="stars"><text wx:for="{{[1,2,3,4,5]}}" wx:key="*this" wx:for-item="i" class="{{i <= (item.output_data.satisfaction || 3) ? 'star-filled' : 'star-empty'}}">★</text></view>
+              </view>
+              <view class="card-bottom"><text class="date-text">{{item.dateStr}}</text></view>
+            </view>
+          </view>
+        </block>
+      </view>
+    </block>
+    <block wx:if="{{outputGroups.length === 0 && !loading}}"><view class="empty-state"><text class="empty-emoji">🏆</text><text class="empty-text">No outputs yet.</text></view></block>
+  </view>
+
+  <!-- === SCENE 3: MONEY TAB === -->
+  <view class="log-list" wx:if="{{currentTab === 'money'}}">
+    <view class="budget-card">
+      <view class="budget-header"><text class="budget-label">本月支出</text><view class="budget-action" catchtap="onSetBudget">⚙️ 预算</view></view>
+      <view class="budget-main"><text class="currency">¥</text><text class="amount-large">{{totalExpense}}</text></view>
+      <view class="progress-container"><view class="progress-bar" style="width: {{budgetPercent}}%; background: {{budgetPercent > 90 ? '#ff6b6b' : '#4ecdc4'}}"></view></view>
+      <view class="budget-footer"><text>预算: ¥{{budget}}</text><text>剩余: ¥{{budget - totalExpense}}</text></view>
+    </view>
+    <block wx:for="{{moneyGroups}}" wx:for-item="group" wx:key="key" wx:for-index="groupIndex">
+      <view class="group-header" bindtap="toggleGroup" data-index="{{groupIndex}}" data-type="money">
+        <text class="group-title">{{group.title}}</text>
+        <view class="group-meta"><text>支出: {{group.totalAmount}}</text><text class="arrow {{group.expanded ? 'down' : 'right'}}">▶</text></view>
+      </view>
+      <view class="group-items" hidden="{{!group.expanded}}">
+        <block wx:for="{{group.items}}" wx:key="_id">
+          <view class="card money-card" bindtap="goToEdit" data-id="{{item._id}}">
+            <image wx:if="{{item.fileID}}" class="card-img" src="{{item.fileID}}" mode="aspectFill" lazy-load />
+            <view class="card-content">
+              <view class="card-top"><text class="activity-name">{{item.activity}}</text><view class="money-badge">-{{item.amount}}</view></view>
+              <view class="card-middle"><text class="note-text">{{item.note}}</text></view>
+              <view class="card-bottom"><text class="date-text">{{item.dateStr}}</text></view>
+            </view>
+          </view>
+        </block>
+      </view>
+    </block>
+  </view>
+
+  <view class="fab-btn" bindtap="goToCreate"><text>+</text></view>
+</view>

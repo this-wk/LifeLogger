@@ -1,0 +1,135 @@
+<!-- pages/create/create.wxml -->
+<view class="container">
+  <form bindsubmit="onSubmit">
+    
+    <!-- 类型切换器 (3 Tabs) -->
+    <view class="type-switch">
+      <view class="type-item {{recordType === 'time' ? 'active' : ''}}" bindtap="onTypeChange" data-type="time">⏳ 时间</view>
+      <view class="type-item {{recordType === 'output' ? 'active' : ''}}" bindtap="onTypeChange" data-type="output">🏆 产出</view>
+      <view class="type-item {{recordType === 'money' ? 'active' : ''}}" bindtap="onTypeChange" data-type="money">💰 记账</view>
+    </view>
+
+    <!-- 图片上传 (Common) -->
+    <view class="upload-card" bindtap="{{hasImage ? '' : 'onChooseImage'}}">
+      <block wx:if="{{hasImage}}">
+        <image class="preview-img" src="{{imagePath}}" mode="aspectFill" catchtap="onChooseImage" />
+        <view class="remove-btn" catchtap="onRemoveImage">×</view>
+      </block>
+      <block wx:else>
+        <view class="upload-placeholder">
+          <text class="plus-icon">+</text>
+          <text class="upload-text">添加封面图 / 小票</text>
+        </view>
+      </block>
+    </view>
+
+    <view class="form-card">
+      
+      <!-- 标题 -->
+      <view class="input-group">
+        <view class="label">{{recordType === 'money' ? '消费类别' : '任务/产出'}}</view>
+        <input class="input" name="activity" value="{{activity}}" placeholder="请输入标题..." />
+      </view>
+
+      <!-- 连续任务 Chips (Only for Time Mode) -->
+      <view class="chips-area" wx:if="{{recordType === 'time' && recentTasks.length > 0}}">
+        <scroll-view scroll-x enable-flex class="chips-scroll">
+          <block wx:for="{{recentTasks}}" wx:key="*this">
+            <view class="chip" bindtap="onChipTap" data-title="{{item}}">{{item}}</view>
+          </block>
+        </scroll-view>
+      </view>
+
+      <!-- 场景 1: 时间 -->
+      <block wx:if="{{recordType === 'time'}}">
+        <view class="input-group">
+          <view class="label">耗时 (min)</view>
+          <input class="input" name="duration" type="number" value="{{duration}}" placeholder="0" />
+        </view>
+        
+        <!-- 长期任务开关 -->
+        <view class="input-group switch-group" bindtap="onContinuousChange">
+          <view class="label">长期项目?</view>
+          <view class="switch-container">
+             <view class="switch-text">{{isContinuous ? '是 (连续记录)' : '否 (单次任务)'}}</view>
+             <view class="checkbox {{isContinuous ? 'checked' : ''}}"></view>
+          </view>
+        </view>
+
+        <view class="input-group-col">
+          <view class="label">优先级</view>
+          <radio-group class="priority-group" bindchange="onPriorityChange" name="priority">
+            <label class="priority-item {{priority == '1' ? 'selected-p1' : ''}}">
+              <radio value="1" checked="{{priority == '1'}}" hidden /><view class="p-dot p1"></view><text>马上</text>
+            </label>
+            <label class="priority-item {{priority == '2' ? 'selected-p2' : ''}}">
+              <radio value="2" checked="{{priority == '2'}}" hidden /><view class="p-dot p2"></view><text>计划</text>
+            </label>
+            <label class="priority-item {{priority == '3' ? 'selected-p3' : ''}}">
+              <radio value="3" checked="{{priority == '3'}}" hidden /><view class="p-dot p3"></view><text>授权</text>
+            </label>
+            <label class="priority-item {{priority == '4' ? 'selected-p4' : ''}}">
+              <radio value="4" checked="{{priority == '4'}}" hidden /><view class="p-dot p4"></view><text>稍后</text>
+            </label>
+          </radio-group>
+        </view>
+      </block>
+
+      <!-- 场景 2: 产出 (Output) -->
+      <block wx:if="{{recordType === 'output'}}">
+        <view class="input-group">
+          <view class="label">类型</view>
+          <radio-group class="type-group" bindchange="onOutputTypeChange">
+            <label class="type-radio {{outputType == 'code' ? 'active' : ''}}"><radio value="code" hidden/>Code</label>
+            <label class="type-radio {{outputType == 'article' ? 'active' : ''}}"><radio value="article" hidden/>Article</label>
+            <label class="type-radio {{outputType == 'video' ? 'active' : ''}}"><radio value="video" hidden/>Video</label>
+          </radio-group>
+        </view>
+
+        <view class="input-group">
+          <view class="label">满意度</view>
+          <view class="star-rating">
+            <view wx:for="{{[1, 2, 3, 4, 5]}}" wx:key="*this" class="star-item" bindtap="onStarTap" data-score="{{item}}">
+              <text class="star-icon {{item <= satisfaction ? 'filled' : ''}}">★</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="input-group">
+          <view class="label">链接</view>
+          <input class="input" name="link" value="{{link}}" placeholder="http://..." />
+        </view>
+      </block>
+
+      <!-- 场景 3: 记账 -->
+      <block wx:if="{{recordType === 'money'}}">
+        <view class="input-group">
+          <view class="label">金额 (¥)</view>
+          <input class="input" name="amount" type="digit" value="{{amount}}" placeholder="0.00" />
+        </view>
+      </block>
+
+      <!-- 公共字段 -->
+      <view class="input-group">
+        <view class="label">日期</view>
+        <picker mode="date" value="{{date}}" bindchange="onDateChange">
+          <view class="picker-value">{{date}}</view>
+        </picker>
+      </view>
+
+      <view class="input-group no-border">
+        <!-- 动态 Label: 长期项目显示“学习内容”，否则显示“备注” -->
+        <view class="label">{{isContinuous ? '学习内容' : '备注'}}</view>
+        <textarea 
+          class="textarea" 
+          name="note" 
+          value="{{note}}" 
+          placeholder="{{isContinuous ? '今天学了什么章节？' : '写点详细的...'}}" 
+          placeholder-class="placeholder"
+          auto-height />
+      </view>
+    </view>
+
+    <button class="submit-btn" form-type="submit">完成</button>
+  </form>
+</view>

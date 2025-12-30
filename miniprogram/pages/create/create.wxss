@@ -1,0 +1,56 @@
+/* pages/create/create.wxss */
+.container { padding: 30rpx; }
+
+/* Tabs */
+.type-switch { display: flex; background: #fff; border-radius: 24rpx; padding: 10rpx; margin-bottom: 30rpx; box-shadow: var(--shadow); }
+.type-item { flex: 1; text-align: center; padding: 20rpx 0; font-size: 28rpx; color: #666; border-radius: 18rpx; transition: all 0.3s ease; }
+.type-item.active { background: var(--primary-color, #4A90E2); color: #fff; font-weight: 600; box-shadow: 0 4rpx 10rpx rgba(0,0,0,0.1); }
+
+/* Common UI */
+.upload-card { background: #fff; border-radius: 24rpx; height: 300rpx; margin-bottom: 30rpx; display: flex; justify-content: center; align-items: center; position: relative; overflow: hidden; box-shadow: var(--shadow); }
+.upload-placeholder { display: flex; flex-direction: column; align-items: center; color: #ccc; }
+.plus-icon { font-size: 60rpx; }
+.preview-img { width: 100%; height: 100%; }
+.remove-btn { position: absolute; top: 10rpx; right: 10rpx; background: rgba(0,0,0,0.5); color: #fff; width: 40rpx; height: 40rpx; border-radius: 50%; text-align: center; line-height: 36rpx; }
+
+.form-card { background: #fff; border-radius: 24rpx; padding: 10rpx 30rpx; box-shadow: var(--shadow); margin-bottom: 50rpx; }
+.input-group, .input-group-col { padding: 24rpx 0; border-bottom: 1rpx solid #f0f0f0; display: flex; align-items: center; }
+.input-group-col { flex-direction: column; align-items: flex-start; }
+.input-group.no-border { border-bottom: none; }
+.label { font-size: 28rpx; font-weight: 600; color: #333; width: 160rpx; }
+.input, .picker-value, .textarea { flex: 1; font-size: 28rpx; color: #333; text-align: right; }
+.placeholder { color: #bdc3c7; }
+
+/* Switch for Continuous */
+.switch-container { flex: 1; display: flex; justify-content: flex-end; align-items: center; }
+.switch-text { font-size: 26rpx; color: #666; margin-right: 16rpx; }
+.checkbox { width: 36rpx; height: 36rpx; border: 2rpx solid #ccc; border-radius: 50%; transition: all 0.3s; }
+.checkbox.checked { background: var(--primary-color, #4A90E2); border-color: var(--primary-color, #4A90E2); position: relative; }
+.checkbox.checked::after { content: ''; position: absolute; top: 8rpx; left: 8rpx; width: 20rpx; height: 10rpx; border-left: 4rpx solid #fff; border-bottom: 4rpx solid #fff; transform: rotate(-45deg); }
+
+/* Chips */
+.chips-area { margin-top: 20rpx; padding-top: 10rpx; padding-bottom: 20rpx; border-bottom: 1rpx solid #f0f0f0; width: 100%; }
+.chips-scroll { display: flex; white-space: nowrap; height: 90rpx; align-items: center; }
+.chip { display: block; flex-shrink: 0; background: #eef2f7; padding: 12rpx 30rpx; border-radius: 40rpx; font-size: 26rpx; line-height: 1.2; color: #4A90E2; margin-right: 20rpx; }
+
+/* Priority */
+.priority-group { display: flex; justify-content: space-between; width: 100%; margin-top: 20rpx; }
+.priority-item { display: flex; flex-direction: column; align-items: center; padding: 10rpx; border-radius: 12rpx; background: #f8f9fa; width: 20%; border: 2rpx solid transparent; }
+.p-dot { width: 20rpx; height: 20rpx; border-radius: 50%; margin-bottom: 6rpx; }
+.p1 { background: #ff6b6b; } .selected-p1 { border-color: #ff6b6b; background: rgba(255,107,107,0.1); }
+.p2 { background: #feca57; } .selected-p2 { border-color: #feca57; background: rgba(254,202,87,0.1); }
+.p3 { background: #48dbfb; } .selected-p3 { border-color: #48dbfb; background: rgba(72,219,251,0.1); }
+.p4 { background: #c8d6e5; } .selected-p4 { border-color: #c8d6e5; background: rgba(200,214,229,0.2); }
+
+/* Output Type Radio */
+.type-group { display: flex; gap: 20rpx; }
+.type-radio { font-size: 26rpx; padding: 8rpx 20rpx; background: #f0f0f0; border-radius: 10rpx; color: #666; }
+.type-radio.active { background: #f1c40f; color: #fff; font-weight: 600; }
+
+/* Star Rating */
+.star-rating { display: flex; align-items: center; }
+.star-item { padding: 0 10rpx; }
+.star-icon { font-size: 40rpx; color: #e0e0e0; transition: color 0.2s; }
+.star-icon.filled { color: #f1c40f; }
+
+.submit-btn { background: var(--primary-color, #4A90E2); color: #fff; border-radius: 50rpx; width: 100% !important; }
