@@ -85,29 +85,29 @@
     <block wx:if="{{timeViewMode === 'project'}}">
       <block wx:for="{{projectGroups}}" wx:for-item="project" wx:key="title" wx:for-index="idx">
         <view class="project-card {{project.status === 'done' ? 'project-done' : ''}}">
-          <!-- Project Header -->
-          <view class="project-header" bindtap="toggleGroup" data-index="{{idx}}" data-type="project">
-            
-            <!-- Project Checkbox -->
-            <view class="checkbox-area" style="padding-right: 20rpx;" catchtap="onToggleProjectStatus" data-title="{{project.title}}" data-status="{{project.status}}" data-index="{{idx}}">
-               <view class="checkbox {{project.status === 'done' ? 'checked' : ''}}" style="width:44rpx;height:44rpx;"></view>
+          <!-- New Unified Main Content Layout -->
+          <view class="project-main-content">
+            <!-- Left Section: Title & Update Time -->
+            <view class="project-left-side" bindtap="toggleGroup" data-index="{{idx}}" data-type="project">
+              <view class="checkbox-area" catchtap="onToggleProjectStatus" data-title="{{project.title}}" data-status="{{project.status}}" data-index="{{idx}}">
+                <view class="checkbox {{project.status === 'done' ? 'checked' : ''}}"></view>
+              </view>
+              <view class="project-titles">
+                <text class="project-title {{project.status === 'done' ? 'done-text' : ''}}">{{project.title}}</text>
+                <text class="project-update">最近更新: {{project.lastUpdateStr}}</text>
+              </view>
             </view>
 
-            <view class="project-info">
-              <text class="project-title {{project.status === 'done' ? 'done-text' : ''}}">{{project.title}}</text>
-              <text class="project-update">最近更新: {{project.lastUpdateStr}}</text>
-            </view>
-            <view class="project-stat">
-              <text class="stat-num">{{project.totalDuration}}</text>
-              <text class="stat-unit">min</text>
+            <!-- Right Section: Duration & Quick Add Button -->
+            <view class="project-right-side">
+              <view class="project-stat-mini">
+                <text class="stat-num-large">{{project.totalDuration}}</text>
+                <text class="stat-unit-tiny">min</text>
+              </view>
+              <view class="add-btn-sm" wx:if="{{project.status !== 'done'}}" catchtap="onContinueProject" data-title="{{project.title}}">追加记录</view>
             </view>
           </view>
           
-          <!-- Quick Add Button -->
-          <view class="project-action" wx:if="{{project.status !== 'done'}}">
-            <view class="add-btn" catchtap="onContinueProject" data-title="{{project.title}}">➕ 追加记录</view>
-          </view>
-
           <!-- History List (Collapsible) -->
           <view class="project-history" hidden="{{!project.expanded}}">
             <view class="history-divider"></view>
