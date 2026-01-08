@@ -106,22 +106,27 @@ Page({
 
   loadLogs: function() {
     this.setData({ loading: true })
-    const db = wx.cloud.database()
     
-    // 1. Query Logs
-    const logsPromise = db.collection('timelogs')
-      .orderBy('createTime', 'desc')
-      .limit(100)
-      .get()
+    // 1. Query Logs (Use Cloud Function to bypass 20-limit, up to 1000)
+    const logsPromise = wx.cloud.callFunction({
+      name: 'lifeDataHelper',
+      data: {
+        action: 'getRecords',
+        collection: 'timelogs',
+        limit: 1000 
+      }
+    }).then(res => res.result)
 
-    // 2. Query Project Meta (Status)
-    // In a real app, you might want to filter this, but for now fetching all is fine for small scale
-    const projectsPromise = db.collection('projects').get().catch(() => ({ data: [] })) 
+    // 2. Query Project Meta
+    const projectsPromise = wx.cloud.callFunction({
+      name: 'lifeDataHelper',
+      data: { action: 'getProjects' }
+    }).then(res => res.result).catch(() => ({ data: [] }))
 
     Promise.all([logsPromise, projectsPromise])
       .then(([logsRes, projectsRes]) => {
-        const rawLogs = logsRes.data
-        const projectMetaList = projectsRes.data
+        const rawLogs = logsRes.data || []
+        const projectMetaList = projectsRes.data || []
         const processed = this.processLogs(rawLogs)
         
         // 1. Regular Grouping (Timeline) - Using Independent Modes
@@ -142,90 +147,50 @@ Page({
         })
 
         this.calculateBudgetStats()
+        // Calculate streak from the data we just loaded
+        this.calculateStreak(processed.outputLogs)
       })
       .catch(err => {
-        console.error(err)
+        console.error("Load failed", err)
         this.setData({ loading: false })
       })
   },
 
-  // Aggregate time logs by Title & Merge Status
-  aggregateProjects: function(timeLogs, projectMetaList = []) {
-    const projectMap = {}
-    
-    // Create a map for quick status lookup: { "Learn C++": "done", ... }
-    const metaMap = {}
-    projectMetaList.forEach(p => { metaMap[p.title] = p })
+  // ... (previous methods)
 
-    timeLogs.forEach(log => {
-      const title = log.activity
-      if (!projectMap[title]) {
-        const meta = metaMap[title] || {}
-        projectMap[title] = {
-          title: title,
-          totalDuration: 0,
-          count: 0,
-          lastUpdate: log.rawDate,
-          items: [], // History
-          expanded: false,
-          status: meta.status || 'doing', // 'doing' | 'done'
-          metaId: meta._id // Store ID for quicker updates if available
+  calculateStreak: function(outputLogs) {
+    if (!outputLogs || outputLogs.length === 0) {
+      this.setData({ streak: 0 })
+      return
+    }
+
+    // PRD: Streak is based on 'output' type records
+    const dates = outputLogs.map(d => new Date(d.createTime).toDateString())
+    const uniqueDates = [...new Set(dates)] 
+    
+    let streak = 0
+    const today = new Date().toDateString()
+    const yesterday = new Date(Date.now() - 86400000).toDateString()
+    
+    // Check if the latest output is today or yesterday to keep the streak alive
+    if (uniqueDates[0] === today || uniqueDates[0] === yesterday) {
+      streak = 1
+      let currentDate = new Date(uniqueDates[0])
+      
+      for (let i = 1; i < uniqueDates.length; i++) {
+        const prevDate = new Date(uniqueDates[i])
+        const diffTime = Math.abs(currentDate - prevDate)
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) 
+        
+        if (diffDays === 1) { 
+          streak++
+          currentDate = prevDate 
+        } else { 
+          break 
         }
       }
-      
-      const p = projectMap[title]
-      p.totalDuration += (log.duration || 0)
-      p.count += 1
-      p.items.push(log)
-      if (log.rawDate > p.lastUpdate) p.lastUpdate = log.rawDate
-    })
-
-    // Convert to array and Sort
-    return Object.values(projectMap)
-      .sort((a, b) => {
-        // Sort 'doing' before 'done'
-        if (a.status !== b.status) return a.status === 'done' ? 1 : -1
-        return b.lastUpdate - a.lastUpdate
-      })
-      .map(p => {
-        const d = p.lastUpdate
-        p.lastUpdateStr = `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-        return p
-      })
-  },
-
-  // Toggle Project Status
-  onToggleProjectStatus: function(e) {
-    const { title, status, index } = e.currentTarget.dataset
-    const newStatus = status === 'done' ? 'doing' : 'done'
-    
-    // 1. Optimistic UI Update
-    this.setData({
-      [`projectGroups[${index}].status`]: newStatus
-    })
-
-    const db = wx.cloud.database()
-    const projectsCol = db.collection('projects')
-
-    // 2. Find and Update/Insert
-    // Since we don't always have _id in the UI (if it was just created from logs), we query by title first
-    projectsCol.where({ title: title }).get()
-      .then(res => {
-        if (res.data.length > 0) {
-          // Update existing
-          projectsCol.doc(res.data[0]._id).update({ data: { status: newStatus } })
-        } else {
-          // Insert new
-          projectsCol.add({ data: { title: title, status: newStatus } })
-        }
-      })
-      .catch(err => {
-         console.error("Project status sync failed", err)
-         // Check if error is due to missing collection
-         if (err.errMsg && err.errMsg.includes('Collection not found')) {
-           wx.showModal({ title: '提示', content: '请先在云开发控制台创建 "projects" 集合以保存项目状态。', showCancel: false })
-         }
-      })
+    }
+    this.setData({ streak })
   },
 
   processLogs: function(rawLogs) {
@@ -253,21 +218,18 @@ Page({
       const d = item.rawDate
       
       if (mode === 'week') {
-        // Find Monday of the current week (Assuming Mon-Sun week)
-        const day = d.getDay() || 7; // Get current day number, converting Sun(0) to 7
-        if (day !== 1) d.setHours(0,0,0,0); // Reset time to avoid drift when calculating
+        const day = d.getDay() || 7; 
+        if (day !== 1) d.setHours(0,0,0,0); 
         
         const monday = new Date(d); 
         monday.setDate(d.getDate() - (day - 1));
-        monday.setHours(0,0,0,0); // Ensure Monday is at 00:00:00
+        monday.setHours(0,0,0,0); 
 
         const sunday = new Date(monday);
         sunday.setDate(monday.getDate() + 6);
 
-        // Key: Use Monday timestamp for sorting
         groupKey = `WEEK-${monday.getTime()}`
         
-        // Title: "2025.12.29 - 01.04"
         const mMon = monday.getMonth() + 1
         const mDay = monday.getDate()
         const sMon = sunday.getMonth() + 1
@@ -294,47 +256,60 @@ Page({
     })
   },
 
-  calculateStreak: function() {
-    const db = wx.cloud.database()
-    // Count ALL record types for streak (Time/Money/Output)
-    db.collection('timelogs')
-      .orderBy('createTime', 'desc')
-      .limit(100)
-      .get()
-      .then(res => {
-        const dates = res.data.map(d => new Date(d.createTime).toDateString())
-        const uniqueDates = [...new Set(dates)] 
-        let streak = 0
-        const today = new Date().toDateString()
-        const yesterday = new Date(Date.now() - 86400000).toDateString()
-        
-        if (uniqueDates.length > 0) {
-          // Check if the latest record is today or yesterday
-          if (uniqueDates[0] === today || uniqueDates[0] === yesterday) {
-            streak = 1
-            let currentDate = new Date(uniqueDates[0])
-            for (let i = 1; i < uniqueDates.length; i++) {
-              const prevDate = new Date(uniqueDates[i])
-              // Calculate difference in days (normalize to midnight)
-              const diffTime = Math.abs(currentDate - prevDate)
-              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) 
-              
-              if (diffDays === 1) { 
-                streak++
-                currentDate = prevDate 
-              } else { 
-                break 
-              }
-            }
-          }
+  aggregateProjects: function(timeLogs, projectMetaList = []) {
+    const projectMap = {}
+    const metaMap = {}
+    projectMetaList.forEach(p => { metaMap[p.title] = p })
+
+    timeLogs.forEach(log => {
+      const title = log.activity
+      if (!projectMap[title]) {
+        const meta = metaMap[title] || {}
+        projectMap[title] = {
+          title: title,
+          totalDuration: 0,
+          count: 0,
+          lastUpdate: log.rawDate,
+          items: [], 
+          expanded: false,
+          status: meta.status || 'doing', 
+          metaId: meta._id 
         }
-        this.setData({ streak })
+      }
+      
+      const p = projectMap[title]
+      p.totalDuration += (log.duration || 0)
+      p.count += 1
+      p.items.push(log)
+      if (log.rawDate > p.lastUpdate) p.lastUpdate = log.rawDate
     })
+
+    return Object.values(projectMap)
+      .sort((a, b) => {
+        if (a.status !== b.status) return a.status === 'done' ? 1 : -1
+        return b.lastUpdate - a.lastUpdate
+      })
+      .map(p => {
+        const d = p.lastUpdate
+        p.lastUpdateStr = `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+        return p
+      })
   },
 
   calculateBudgetStats: function() {
     const moneyLogs = this.data.rawMoneyLogs || []
-    const total = moneyLogs.reduce((acc, cur) => acc + (cur.amount || 0), 0)
+    const now = new Date()
+    const currentYear = now.getFullYear()
+    const currentMonth = now.getMonth() // 0-based index
+
+    const total = moneyLogs.reduce((acc, cur) => {
+      // Ensure we compare against the same year and month
+      if (cur.rawDate && cur.rawDate.getFullYear() === currentYear && cur.rawDate.getMonth() === currentMonth) {
+        return acc + (cur.amount || 0)
+      }
+      return acc
+    }, 0)
+
     let percent = (this.data.budget > 0) ? (total / this.data.budget) * 100 : 0
     this.setData({ totalExpense: total.toFixed(2), budgetPercent: Math.min(percent, 100).toFixed(1) })
   },

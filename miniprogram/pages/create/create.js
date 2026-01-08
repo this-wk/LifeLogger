@@ -51,21 +51,23 @@ Page({
 
   // Optimized: Load only tasks marked as continuous/project previously
   loadRecentProjects: function() {
-    const db = wx.cloud.database()
-    db.collection('timelogs')
-      .where({ 
-        recordType: 'time',
-        // We want to find titles of tasks that were marked as continuous
-        'task_info.is_continuous': true 
-      })
-      .orderBy('createTime', 'desc')
-      .limit(20)
-      .get()
-      .then(res => {
-        const titles = res.data.map(d => d.activity)
-        const uniqueTitles = [...new Set(titles)].slice(0, 8)
-        this.setData({ recentTasks: uniqueTitles })
-      })
+    wx.cloud.callFunction({
+      name: 'lifeDataHelper',
+      data: {
+        action: 'getRecords',
+        collection: 'timelogs',
+        limit: 100 // Fetch more history to find unique project titles
+      }
+    }).then(res => {
+      const logs = res.result.data || []
+      // Filter logs that were marked as continuous
+      const titles = logs
+        .filter(log => log.recordType === 'time' && log.task_info && log.task_info.is_continuous)
+        .map(log => log.activity)
+        
+      const uniqueTitles = [...new Set(titles)].slice(0, 8)
+      this.setData({ recentTasks: uniqueTitles })
+    })
   },
 
   onChipTap: function(e) {
